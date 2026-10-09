@@ -4,42 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PIP-BOY 3000A // Character Sheet</title>
-  <meta name="theme-color" content="#0C0500">
+  <meta name="theme-color" content="#1b1609">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 
-  <!-- Recolors white SVG icons to Mojave amber (works over file://) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <filter id="amberize" color-interpolation-filters="sRGB">
-      <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.714  0 0 0 0 0.259  0 0 0 1 0"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.941  0 0 0 0 0.69  0 0 0 0 0.298  0 0 0 1 0"/>
     </filter>
   </svg>
 
-  <!-- ============ CRT BEZEL ============ -->
-  <main class="bezel" id="bezel">
+  <main class="frame" id="bezel">
     <div class="screen" id="screen" aria-label="Pip-Boy 3000A screen">
 
-      <!-- ---------- TOP HEADER ---------- -->
-      <header class="hdr">
-        <div class="hdr-line">
-          <span class="hdr-brand">VAULT-TEC&nbsp;&nbsp;//&nbsp;&nbsp;PIP-BOY 3000A</span>
-          <span class="hdr-section" id="hdrSection">STAT &rsaquo; STATUS</span>
-          <span class="hdr-lvl" id="hdrLvl">LVL 1</span>
-        </div>
-
-        <!-- Main tab menu -->
-        <nav class="tabs main-tabs" id="mainTabs" role="tablist" aria-label="Main tabs">
-          <button class="tab" role="tab" data-tab="stat">STAT</button>
-          <button class="tab" role="tab" data-tab="inv">INV</button>
-          <button class="tab" role="tab" data-tab="data">DATA</button>
+      <header class="top">
+        <nav class="maintabs" id="mainTabs" role="tablist" aria-label="Main tabs">
+          <button class="tab" role="tab" data-tab="stat">Stats</button>
+          <button class="tab" role="tab" data-tab="inv">Items</button>
+          <button class="tab" role="tab" data-tab="data">Data</button>
         </nav>
-
-        <!-- Sub-tab navigation -->
-        <nav class="tabs sub-tabs" id="subTabs" role="tablist" aria-label="Sub tabs"></nav>
+        <div class="hud">
+          <span class="hud-cell" id="hdrLvl">LVL 1</span>
+          <span class="hud-cell">HP<b id="sbHp">100/100</b></span>
+          <span class="hud-cell">AP<b id="sbAp">65/65</b></span>
+          <span class="hud-cell">RADS<b id="sbRads">0</b></span>
+          <span class="hud-cell">CAPS<b id="sbCaps" contenteditable="true" spellcheck="false" inputmode="numeric" title="Click to edit caps">000</b></span>
+          <span class="hud-cell hud-time"><b id="sbTime">22 OCT 2281 08:00</b></span>
+          <span class="hud-end"></span>
+        </div>
+        <span id="hdrSection" hidden></span>
+        <span id="sbLvl" hidden>1</span>
       </header>
 
-      <!-- ---------- CENTER SPLIT PANE ---------- -->
       <section class="split" id="split">
         <aside class="pane pane-list" id="listPane" aria-label="Item list">
           <div class="list-head" id="listHead"></div>
@@ -51,21 +48,8 @@
         </article>
       </section>
 
-      <!-- ---------- BOTTOM STATUS BAR ---------- -->
-      <footer class="sbar" id="sbar">
-        <div class="rule"></div>
-        <div class="sbar-row">
-          <span class="sb-cell sb-hp">HP <b id="sbHp">100/100</b></span>
-          <span class="sb-cell">LEVEL <b id="sbLvl">1</b></span>
-          <span class="sb-cell">AP <b id="sbAp">65/65</b></span>
-          <span class="sb-cell">RADS <b id="sbRads">0</b></span>
-          <span class="sb-cell">CAPS <b id="sbCaps" contenteditable="true" spellcheck="false" inputmode="numeric" title="Click to edit caps">000</b></span>
-          <span class="sb-cell sb-time"><b id="sbTime">22 OCT 2281 08:00</b></span>
-        </div>
-        <div class="rule"></div>
-      </footer>
+      <nav class="subtabs" id="subTabs" role="tablist" aria-label="Sub tabs"></nav>
 
-      <!-- ---------- BOOT OVERLAY ---------- -->
       <div class="boot" id="boot" role="dialog" aria-label="Boot sequence" tabindex="0">
         <div class="boot-inner">
           <div class="boot-gif tint"><img src="./assets/images/initiating.gif" alt=""></div>
@@ -74,26 +58,19 @@
         </div>
       </div>
 
-      <!-- Toast -->
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-      <!-- CRT overlays (inside screen so they follow its curvature) -->
       <div class="fx fx-scan"></div>
-      <div class="fx fx-roll"></div>
       <div class="fx fx-noise"></div>
       <div class="fx fx-vignette"></div>
     </div>
-
-    <!-- Outer bezel glass reflection -->
-    <div class="bezel-glass"></div>
   </main>
 
-  <!-- Keyboard legend -->
   <div class="legend" id="legend">
     <span><b>Q / E</b> MAIN TAB</span>
     <span><b>&larr; / &rarr;</b> SUB TAB</span>
     <span><b>&uarr; / &darr;</b> SELECT</span>
-    <span><b>+ / &minus;</b> ADJUST</span>
+    <span id="legendAdjust"><b>+ / &minus;</b> ADJUST</span>
     <span><b>ENTER</b> USE / EQUIP</span>
     <span><b>M</b> MUTE</span>
   </div>

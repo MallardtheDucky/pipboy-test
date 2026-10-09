@@ -1,13 +1,6 @@
-/* =====================================================================
-   PIP-BOY 3000A  //  FALLOUT: NEW VEGAS CHARACTER SHEET
-   Tab logic · RPG calculations · audio · inline editing · persistence
-   ===================================================================== */
 (() => {
 'use strict';
 
-/* ------------------------------------------------------------------ *
- *  Helpers
- * ------------------------------------------------------------------ */
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -15,11 +8,9 @@ const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
 const pad = (n, l = 2) => String(Math.floor(n)).padStart(l, '0');
 const uid = () => 'i' + Math.random().toString(36).slice(2, 9);
+const tc = v => { const t = String(v ?? ''); return (t.length > 3 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t.replace(/[A-Z][A-Z']*/g, w => w[0] + w.slice(1).toLowerCase()) : t; };
 const fmt1 = n => (Math.round(n * 10) / 10).toString();
 
-/* ------------------------------------------------------------------ *
- *  Static game data
- * ------------------------------------------------------------------ */
 const SPECIAL_DEFS = [
   { k:'S', name:'STRENGTH',     img:'Strength',     desc:'Raw physical power. Governs how much you can carry and how hard you hit in melee and unarmed combat, and sets the minimum Strength many weapons require to be used without penalty.' },
   { k:'P', name:'PERCEPTION',   img:'Perception',   desc:'Awareness of your surroundings and your eye for detail. Improves your sense of enemies at a distance and feeds Energy Weapons, Explosives and Lockpick.' },
@@ -79,13 +70,10 @@ const LIMBS = [
 const NUMERIC_KEYS = new Set(['qty','wt','val','dmg','ap','rof','cnd','dr','strReq','vatsAmmo','hp','rads']);
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const SAVE_KEY = 'pipboy3000a.fnv.sheet.v1';
-const SPECIAL_POOL = 40;       // 7 stats x 5 + 5 bonus points (character creation)
-const CLOCK_START = Date.UTC(2281, 9, 22, 8, 0);   // 22 OCT 2281, 08:00
-const CLOCK_SCALE = 30;        // game minutes per real minute
+const SPECIAL_POOL = 40;
+const CLOCK_START = Date.UTC(2281, 9, 22, 8, 0);
+const CLOCK_SCALE = 30;
 
-/* ------------------------------------------------------------------ *
- *  Default state (placeholder data - everything is editable in-app)
- * ------------------------------------------------------------------ */
 const mk = (cat, o) => Object.assign({ id: uid(), cat, qty: 1, wt: 1, val: 1, note: '' }, o);
 
 function defaultState() {
@@ -149,9 +137,6 @@ function defaultState() {
   };
 }
 
-/* ------------------------------------------------------------------ *
- *  State + persistence
- * ------------------------------------------------------------------ */
 let state = load();
 
 function load() {
@@ -175,12 +160,9 @@ function load() {
 let saveTimer = 0;
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ } }, 250);
+  saveTimer = setTimeout(() => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {  } }, 250);
 }
 
-/* ------------------------------------------------------------------ *
- *  Derived RPG values
- * ------------------------------------------------------------------ */
 const getItem = id => state.items.find(i => i.id === id);
 const getNote = id => state.notes.find(n => n.id === id);
 const perkTaken = id => state.perks.includes(id);
@@ -218,9 +200,6 @@ function clampVitals() {
   state.caps = Math.max(0, Math.round(state.caps || 0));
 }
 
-/* ------------------------------------------------------------------ *
- *  Audio  (local ./assets/sounds files, Web Audio synthesis fallback)
- * ------------------------------------------------------------------ */
 const Sound = {
   muted: false, ctx: null, files: {}, failed: {}, radioNodes: null,
   init() {
@@ -275,12 +254,11 @@ const Sound = {
         const p = c.play();
         if (p && p.catch) p.catch(() => this.synth(n));
         return;
-      } catch (e) { /* fall through */ }
+      } catch (e) {  }
     }
     this.synth(n);
   },
-  /* Radio: continuous synthesized static + carrier that fades in near a station */
-  radioStart() {
+    radioStart() {
     const c = this.ac(); if (!c || this.radioNodes) return;
     const len = c.sampleRate * 2, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -304,17 +282,14 @@ const Sound = {
   radioStop() {
     if (!this.radioNodes) return;
     const n = this.radioNodes; this.radioNodes = null;
-    try { n.src.stop(); n.o1.stop(); n.o2.stop(); } catch (e) { /* already stopped */ }
+    try { n.src.stop(); n.o1.stop(); n.o2.stop(); } catch (e) {  }
   }
 };
 
-/* ------------------------------------------------------------------ *
- *  UI state + tab hierarchy
- * ------------------------------------------------------------------ */
 const TABS = {
-  stat: { label:'STAT', subs:[['status','STATUS'],['special','SPECIAL'],['skills','SKILLS'],['perks','PERKS']] },
-  inv:  { label:'INV',  subs:[['weapons','WEAPONS'],['apparel','APPAREL'],['aid','AID'],['misc','MISC'],['ammo','AMMO']] },
-  data: { label:'DATA', subs:[['bio','BIO / PROFILE'],['notes','NOTES'],['radio','RADIO']] }
+  stat: { label:'STATS', subs:[['status','Status'],['special','S.P.E.C.I.A.L.'],['skills','Skills'],['perks','Perks']] },
+  inv:  { label:'ITEMS', subs:[['weapons','Weapons'],['apparel','Apparel'],['aid','Aid'],['misc','Misc'],['ammo','Ammo']] },
+  data: { label:'DATA',  subs:[['bio','Bio'],['notes','Notes'],['radio','Radio']] }
 };
 const TAB_ORDER = ['stat', 'inv', 'data'];
 const ui = { tab:'stat', sub:{ stat:'status', inv:'weapons', data:'bio' }, sel:{}, confirm:null };
@@ -323,9 +298,6 @@ const screenKey = () => ui.tab + '.' + ui.sub[ui.tab];
 const getSel = () => ui.sel[screenKey()] || 0;
 const setSel = i => { ui.sel[screenKey()] = i; };
 
-/* ------------------------------------------------------------------ *
- *  Markup builders
- * ------------------------------------------------------------------ */
 const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span class="lead"></span><span class="v">${v}</span></div>`;
 const bar = (pct, cls = '') => `<div class="bar ${cls}"><i style="width:${clamp(pct, 0, 100)}%"></i></div>`;
 const dataAttrs = d => Object.entries(d).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
@@ -337,40 +309,102 @@ const fld = (path, val, o = {}) => {
 };
 const sel = (path, val, options) => `<select class="fld" data-bind="${path}" aria-label="${esc(path)}">${options.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
 const kvf = (label, path, val, o = {}) => kv(label, fld(path, val, Object.assign({ type:'number', cls:'num', label }, o)));
-const titleRow = (name, tag = '') => `<div class="title-row"><h2>${name}</h2><span class="tag">${tag}</span></div>`;
+const titleRow = (name, tag = '') => `<div class="title-row"><h2>${tc(name)}</h2><span class="tag">${tag}</span></div>`;
 
 /* ------------------------------------------------------------------ *
  *  Vault Boy limb diagram
  * ------------------------------------------------------------------ */
-function vaultBoySvg(selKey) {
-  const c = k => 'limb' + (selKey === k ? ' sel' : '') + (state.limbs[k] <= 0 ? ' crip' : state.limbs[k] < 50 ? ' hurt' : '');
+function vaultBoyImageSvg(selKey) {
+  const hit = (k, x, y, w, h) => `<rect class="hit ${selKey === k ? 'sel' : ''}" data-limb="${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="16"><title>${tc(LIMBS.find(l => l.k === k).name)} ${limbPct(k)}%</title></rect>`;
+  const cbar = (k, x, y, lx1, ly1, lx2, ly2) => {
+    const p = limbPct(k), w = 46;
+    return `<g class="cbar ${selKey === k ? 'sel' : ''} ${p < 25 ? 'low' : ''}" data-limb="${k}">
+      <path class="lead" d="M${lx1} ${ly1} L${lx2} ${ly2}"/>
+      <rect class="frame-r" x="${x}" y="${y}" width="${w}" height="10" rx="1"/>
+      <rect class="fill-r" x="${x + 2}" y="${y + 2}" width="${Math.max(0, (w - 4) * p / 100)}" height="6"/>
+      <title>${tc(LIMBS.find(l => l.k === k).name)} ${p}%</title></g>`;
+  };
   return `
-  <svg class="vb" viewBox="0 0 200 300" role="img" aria-label="Vault Boy limb condition diagram">
-    <!-- legs -->
-    <rect class="${c('rleg')}" data-limb="rleg" x="70"  y="184" width="26" height="90" rx="12"><title>RIGHT LEG ${limbPct('rleg')}%</title></rect>
-    <rect class="${c('lleg')}" data-limb="lleg" x="104" y="184" width="26" height="90" rx="12"><title>LEFT LEG ${limbPct('lleg')}%</title></rect>
-    <path class="det" d="M66 276 Q62 292 76 292 H96 Q98 284 96 276 Z"/>
-    <path class="det" d="M134 276 Q138 292 124 292 H104 Q102 284 104 276 Z"/>
-    <!-- torso -->
-    <rect class="${c('torso')}" data-limb="torso" x="66" y="96" width="68" height="92" rx="18"><title>TORSO ${limbPct('torso')}%</title></rect>
-    <path class="det" d="M100 100 V184"/>
-    <path class="det" d="M68 160 H132"/>
-    <rect class="det" x="93" y="156" width="14" height="9" rx="2"/>
-    <path class="det" d="M80 100 L100 118 L120 100"/>
-    <!-- arms -->
-    <rect class="${c('rarm')}" data-limb="rarm" x="40"  y="104" width="22" height="68" rx="11" transform="rotate(10 51 106)"><title>RIGHT ARM ${limbPct('rarm')}%</title></rect>
-    <rect class="${c('larm')}" data-limb="larm" x="138" y="104" width="22" height="68" rx="11" transform="rotate(-10 149 106)"><title>LEFT ARM ${limbPct('larm')}%</title></rect>
-    <circle class="det" cx="39"  cy="182" r="9"/>
-    <circle class="det" cx="161" cy="182" r="9"/>
-    <path class="det" d="M156 174 V160 Q156 154 161 154 Q166 154 166 160 V174"/>
-    <!-- head -->
-    <ellipse class="${c('head')}" data-limb="head" cx="100" cy="52" rx="34" ry="38"><title>HEAD ${limbPct('head')}%</title></ellipse>
-    <path class="det" d="M68 42 Q76 10 108 12 Q132 14 134 36 Q118 22 96 28 Q80 32 68 42 Z"/>
-    <ellipse class="detf" cx="87"  cy="54" rx="3.4" ry="5"/>
-    <path class="det" d="M107 54 H119"/>
-    <path class="det" d="M96 58 Q100 66 105 62"/>
-    <path class="det" d="M80 70 Q100 90 120 70"/>
-    <path class="det" d="M92 82 Q100 88 108 82"/>
+  <svg class="vb" viewBox="-62 -18 381 420" role="img" aria-label="Vault Boy limb condition diagram">
+    <image href="./assets/images/vault_boy.png" x="0" y="0" width="257" height="388"/>
+    ${hit('head', 107, 4, 106, 128)}
+    ${hit('torso', 110, 128, 94, 124)}
+    ${hit('rarm', 0, 66, 112, 116)}
+    ${hit('larm', 196, 130, 61, 124)}
+    ${hit('rleg', 80, 252, 78, 136)}
+    ${hit('lleg', 158, 252, 58, 118)}
+    ${cbar('head', 130, -16, 153, -6, 153, 6)}
+    ${cbar('torso', 130, 196, 153, 206, 153, 206)}
+    ${cbar('rarm', -58, 196, -12, 201, 40, 170)}
+    ${cbar('larm', 268, 150, 268, 155, 250, 155)}
+    ${cbar('rleg', -58, 340, -12, 345, 96, 345)}
+    ${cbar('lleg', 268, 310, 268, 315, 200, 315)}
+  </svg>`;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Vault Boy paper doll  (textures from the "Vault Boy Paper Doll" pack)
+ *  Each limb is its own outline; a crippled limb swaps to its *_broken
+ *  dashed version, and the face changes with HP / radiation.
+ *  Set VAULT_BOY_STYLE to 'image' to go back to the single vault_boy.png.
+ * ------------------------------------------------------------------ */
+const VAULT_BOY_STYLE = 'doll';
+const DOLL = {            // half-res placement inside the 640 x 570 doll space
+  torso:     { x:224, y:165, w:200, h:252 },
+  head:      { x:235, y:0,   w:168, h:185 },
+  rarm:      { f:'right_arm', x:38,  y:175, w:198, h:106 },
+  larm:      { f:'left_arm',  x:400, y:174, w:200, h:108 },
+  rleg:      { f:'right_leg', x:175, y:344, w:168, h:204 },
+  lleg:      { f:'left_leg',  x:350, y:345, w:141, h:214 }
+};
+const DOLL_FACES = {
+  face_00:[272,48,92,106], face_01:[282,48,74,104], face_02:[276,52,85,106],
+  face_03:[272,56,96,99],  face_04:[274,49,95,154], face_10:[282,48,79,127]
+};
+function dollFace() {
+  const hp = state.hp / maxHp();
+  if (state.hp <= 0) return 'face_04';
+  if (state.rads >= 800) return 'face_10';
+  if (state.rads >= 200) return 'face_03';
+  if (hp >= .75) return 'face_00';
+  if (hp >= .5)  return 'face_01';
+  if (hp >= .25) return 'face_02';
+  return 'face_03';
+}
+function vaultBoySvg(selKey) {
+  if (VAULT_BOY_STYLE === 'image') return vaultBoyImageSvg(selKey);
+  const name = k => tc(LIMBS.find(l => l.k === k).name);
+  const hit = (k, x, y, w, h) => `<rect class="hit ${selKey === k ? 'sel' : ''}" data-limb="${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="14"><title>${name(k)} ${limbPct(k)}%</title></rect>`;
+  const piece = k => {
+    const d = DOLL[k], f = d.f || k, p = limbPct(k), broken = p <= 0;
+    return `<image class="doll ${selKey === k ? 'sel' : ''} ${broken ? 'broken' : p < 50 ? 'hurt' : ''}" data-limb="${k}" href="./assets/images/doll/${f}${broken ? '_broken' : ''}.png" x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}"/>`;
+  };
+  const fc = DOLL_FACES[dollFace()];
+  const cbar = (k, x, y, lx1, ly1, lx2, ly2) => {
+    const p = limbPct(k), w = 84;
+    return `<g class="cbar ${selKey === k ? 'sel' : ''} ${p > 0 && p < 25 ? 'low' : ''} ${p <= 0 ? 'crip' : ''}" data-limb="${k}">
+      <path class="lead" d="M${lx1} ${ly1} L${lx2} ${ly2}"/>
+      <rect class="frame-r" x="${x}" y="${y}" width="${w}" height="16" rx="1"/>
+      ${p <= 0 ? `<text x="${x + w / 2}" y="${y + 13.5}" text-anchor="middle" class="crip-t">CRIPPLED</text>`
+               : `<rect class="fill-r" x="${x + 3}" y="${y + 3}" width="${Math.max(0, (w - 6) * p / 100)}" height="10"/>`}
+      <title>${name(k)} ${p}%</title></g>`;
+  };
+  return `
+  <svg class="vb doll-svg" viewBox="-14 -30 700 620" role="img" aria-label="Vault Boy limb condition diagram">
+    ${piece('torso')}${piece('rarm')}${piece('larm')}${piece('rleg')}${piece('lleg')}${piece('head')}
+    <image class="doll face" href="./assets/images/doll/${dollFace()}.png" x="${fc[0]}" y="${fc[1]}" width="${fc[2]}" height="${fc[3]}"/>
+    ${hit('torso', 224, 165, 191, 190)}
+    ${hit('rarm', 38, 175, 196, 110)}
+    ${hit('larm', 400, 174, 200, 110)}
+    ${hit('rleg', 175, 344, 168, 204)}
+    ${hit('lleg', 350, 345, 141, 214)}
+    ${hit('head', 235, 0, 168, 185)}
+    ${cbar('head', 440, -8, 403, 50, 440, 0)}
+    ${cbar('torso', 440, 330, 415, 300, 440, 338)}
+    ${cbar('rarm', 20, 304, 100, 281, 62, 304)}
+    ${cbar('larm', 548, 304, 530, 282, 590, 304)}
+    ${cbar('rleg', 20, 470, 175, 480, 104, 478)}
+    ${cbar('lleg', 520, 480, 470, 480, 520, 488)}
   </svg>`;
 }
 
@@ -408,9 +442,7 @@ SCREENS['stat.status'] = {
         ${titleRow('GENERAL', 'LVL ' + state.level)}
         <div class="panel">
           <div class="barline"><span class="lab">HP</span>${bar(hpPct, hpPct < 25 ? 'low' : '')}<span class="num">${state.hp}/${maxHp()}</span></div>
-          <div class="btnrow" style="margin:.3em 0 .5em">${btn('&minus;10','hp',{d:-10},'sq')}${btn('&minus;1','hp',{d:-1},'sq')}${btn('+1','hp',{d:1},'sq')}${btn('+10','hp',{d:10},'sq')}${btn('FULL','hpfull')}</div>
           <div class="barline"><span class="lab">AP</span>${bar(apPct)}<span class="num">${state.ap}/${maxAp()}</span></div>
-          <div class="btnrow" style="margin:.3em 0 0">${btn('&minus;5','ap',{d:-5},'sq')}${btn('+5','ap',{d:5},'sq')}${btn('REFILL','apfull')}</div>
         </div>
         <div class="panel">
           ${kv(ico('armor') + ' DAMAGE RESIST. (DR)', totalDR())}
@@ -419,9 +451,6 @@ SCREENS['stat.status'] = {
           ${kv('CARRY WEIGHT', fmt1(weightNow()) + ' / ' + carryCap())}
           ${kv('MAX HP <small>(100 + END x 20)</small>', maxHp())}
           ${kv('MAX AP <small>(65 + AGI x 3)</small>', maxAp())}
-        </div>
-        <div class="panel"><div class="ph">CHARACTER LEVEL</div>
-          <div class="btnrow">${btn('&minus;','lvl',{d:-1},'sq')}<span class="v" style="font-family:var(--font-mono);color:var(--amber-hi);min-width:3ch;text-align:center">${state.level}</span>${btn('+','lvl',{d:1},'sq')}</div>
         </div>`;
     } else if (limb) {
       const p = limbPct(limb.k);
@@ -429,7 +458,6 @@ SCREENS['stat.status'] = {
         ${titleRow(limb.name, p <= 0 ? 'CRIPPLED' : p < 50 ? 'INJURED' : 'HEALTHY')}
         <div class="panel"><div class="ph">LIMB CONDITION</div>
           <div class="barline">${bar(p, p < 25 ? 'low' : '')}<span class="num">${p}%</span></div>
-          <div class="btnrow" style="margin-top:.5em">${btn('&minus;10','limb',{k:limb.k,d:-10},'sq')}${btn('&minus;1','limb',{k:limb.k,d:-1},'sq')}${btn('+1','limb',{k:limb.k,d:1},'sq')}${btn('+10','limb',{k:limb.k,d:10},'sq')}${btn('CRIPPLE','limb',{k:limb.k,d:-100})}${btn('RESTORE','limb',{k:limb.k,d:100})}</div>
         </div>
         <div class="desc">${limb.k === 'head' ? 'A crippled head impairs perception and can cause concussion effects.'
           : limb.k === 'torso' ? 'Torso condition determines your overall resilience to heavy damage.'
@@ -439,13 +467,12 @@ SCREENS['stat.status'] = {
       right = `
         ${titleRow('RADIATION', radSickness(state.rads))}
         <div class="panel"><div class="ph">${ico('radiation')} ACCUMULATED RADS</div>
-          <div class="barline">${bar(state.rads / 10, state.rads >= 800 ? 'low' : '')}<span class="num">${state.rads}</span></div>
-          <div class="btnrow" style="margin-top:.5em">${btn('&minus;50','rads',{d:-50},'sq')}${btn('&minus;10','rads',{d:-10},'sq')}${btn('+10','rads',{d:10},'sq')}${btn('+50','rads',{d:50},'sq')}${btn('CLEAR','radsclear')}</div>
+          <div class="barline">${bar(state.rads / 10, (state.rads >= 800 ? 'low ' : '') + (state.rads > 0 ? 'rad-flicker' : ''))}<span class="num">${state.rads}</span></div>
         </div>
         <div class="desc">Radiation accrues from contaminated food, water and ground. At 200 RADS minor sickness sets in; at 800 it is deadly. RadAway flushes it from your system.</div>`;
     }
     const selKey = limb ? limb.k : null;
-    return `<div class="vb-wrap"><div>${vaultBoySvg(selKey)}</div><div style="display:flex;flex-direction:column;gap:.7em;min-width:0">${right}${limbBars(selKey)}</div></div>`;
+    return `<div class="vb-wrap"><div>${vaultBoySvg(selKey)}</div><div style="display:flex;flex-direction:column;gap:.7em;min-width:0">${right}</div></div>`;
   },
   adjust(item, d) {
     if (item.key === 'general') { state.hp += d * 5; }
@@ -455,7 +482,6 @@ SCREENS['stat.status'] = {
   }
 };
 
-/* ---------- STAT / SPECIAL ---------- */
 SCREENS['stat.special'] = {
   list: () => SPECIAL_DEFS.map(d => ({ key:d.k, name:d.name, val:state.special[d.k] })),
   head: () => '<span>ATTRIBUTE</span><span>RANK</span>',
@@ -483,7 +509,6 @@ SCREENS['stat.special'] = {
   adjust(item, d) { changeSpecial(item.key, d); }
 };
 
-/* ---------- STAT / SKILLS ---------- */
 SCREENS['stat.skills'] = {
   list: () => SKILL_DEFS.map(d => ({ key:d.id, name:d.name, val:skillValue(d).total, eq: state.tags.includes(d.id) ? '*' : '' })),
   head: () => '<span>SKILL</span><span>VALUE</span>',
@@ -752,7 +777,6 @@ SCREENS['data.bio'] = {
   }
 };
 
-/* ---------- DATA / NOTES ---------- */
 SCREENS['data.notes'] = {
   list() {
     const out = state.notes.map(n => ({ id:n.id, name:esc(n.title || 'UNTITLED') }));
@@ -767,7 +791,7 @@ SCREENS['data.notes'] = {
     return `
       <div class="title-row">${fld(`note.${n.id}.title`, n.title, { cls:'name', label:'Entry title' })}<span class="tag">LOG</span></div>
       <div class="term">
-        <div class="term-head">ROBCO INDUSTRIES (TM) TERMLINK // ENTRY ${esc(n.id.toUpperCase())}</div>
+        <div class="term-head">ROBCO INDUSTRIES (TM) TERMLINK
         <textarea data-bind="note.${n.id}.body" spellcheck="false" aria-label="Log body" placeholder="> _">${esc(n.body)}</textarea>
         <div class="meta"><span id="noteCount">${n.body.length} CHARS</span><span>EDITABLE</span></div>
       </div>
@@ -827,9 +851,6 @@ SCREENS['data.radio'] = {
   after() { startRadioLoop(); }
 };
 
-/* ------------------------------------------------------------------ *
- *  Radio loop (animated signal graphic)
- * ------------------------------------------------------------------ */
 let radioRAF = 0;
 function startRadioLoop() { if (!radioRAF) radioRAF = requestAnimationFrame(radioLoop); }
 function radioLoop(t) {
@@ -873,9 +894,6 @@ function updateTunerUI() {
   const d = $('#radioDesc'); if (d) d.textContent = on ? (st ? st.blurb : 'Only static. Keep turning the dial...') : 'Receiver is idle. Press POWER to listen.';
 }
 
-/* ------------------------------------------------------------------ *
- *  Game-rule mutators
- * ------------------------------------------------------------------ */
 function changeSpecial(k, d) {
   const v = state.special[k], left = SPECIAL_POOL - specialSpent();
   if (d > 0 && (v >= 10 || (!state.unlimited && left <= 0))) { Sound.synth('error'); toast(v >= 10 ? 'MAXIMUM RANK' : 'NO POINTS REMAINING'); return; }
@@ -913,9 +931,6 @@ function removeItem(id) {
   Object.keys(state.equip).forEach(k => { if (state.equip[k] === id) state.equip[k] = null; });
 }
 
-/* ------------------------------------------------------------------ *
- *  Actions (data-act delegation)
- * ------------------------------------------------------------------ */
 const actions = {
   hp:    d => { state.hp += num(d.d); },
   hpfull:() => { state.hp = maxHp(); },
@@ -983,22 +998,19 @@ const actions = {
     if (ui.confirm !== 'reset') { armConfirm('reset'); return; }
     ui.confirm = null; Sound.radioStop();
     const keepOn = false; state = defaultState(); state.radio.on = keepOn;
-    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {  }
     ui.sel = {}; toast('DATA RESET');
   },
   radiopower: () => { setRadio(!state.radio.on); },
   tune: d => { tuneTo(state.radio.freq + num(d.d)); }
 };
-const SOFT_ACTIONS = new Set(['tune']);   // handled without a re-render
+const SOFT_ACTIONS = new Set(['tune']);
 
 function armConfirm(key) {
   ui.confirm = key; clearTimeout(armConfirm.t);
   armConfirm.t = setTimeout(() => { ui.confirm = null; renderDetail(); }, 3000);
 }
 
-/* ------------------------------------------------------------------ *
- *  Rendering
- * ------------------------------------------------------------------ */
 const screen = () => SCREENS[screenKey()];
 const currentItems = () => screen().list();
 const selectable = it => it && it.type !== 'sep';
@@ -1013,6 +1025,7 @@ function renderTabs() {
     `<button type="button" class="tab ${ui.sub[ui.tab] === k ? 'active' : ''}" role="tab" data-sub="${k}" aria-selected="${ui.sub[ui.tab] === k}">${l}</button>`).join('');
   const label = t.subs.find(s => s[0] === ui.sub[ui.tab])[1];
   $('#hdrSection').textContent = `${t.label} \u203A ${label}`;
+  $('#split').dataset.screen = screenKey();
 }
 
 function renderList() {
@@ -1023,7 +1036,7 @@ function renderList() {
   list.innerHTML = items.map((it, i) => it.type === 'sep'
     ? `<li class="li sep">${it.name}</li>`
     : `<li class="li ${i === idx ? 'sel' : ''} ${it.type === 'add' ? 'add' : ''}" role="option" aria-selected="${i === idx}" data-i="${i}">
-         <span class="nm">${it.eq ? `<span class="eq">${it.eq}</span>` : ''}${it.name}</span><span class="vl">${it.val ?? ''}</span></li>`).join('');
+         <span class="nm">${it.eq ? `<span class="eq">${it.eq}</span>` : ''}${tc(it.name)}</span><span class="vl">${it.val ?? ''}</span></li>`).join('');
   list.scrollTop = prev;
   const cur = list.children[idx]; if (cur && cur.scrollIntoView) cur.scrollIntoView({ block:'nearest' });
   renderChrome();
@@ -1039,7 +1052,8 @@ function renderDetail() {
   el.scrollTop = prev;
   if (sc.after) sc.after();
 }
-function render() { clampVitals(); renderTabs(); renderList(); renderDetail(); refreshHUD(); }
+function syncLegend() { const l = $('#legendAdjust'); if (l) l.hidden = screenKey() === 'stat.status'; }
+function render() { clampVitals(); renderTabs(); renderList(); renderDetail(); refreshHUD(); syncLegend(); }
 function refreshAfterChange() { clampVitals(); renderList(); renderDetail(); refreshHUD(); save(); }
 
 function refreshHUD() {
@@ -1053,9 +1067,6 @@ function refreshHUD() {
   const caps = $('#sbCaps'); if (document.activeElement !== caps) caps.textContent = pad(state.caps, 3);
 }
 
-/* ------------------------------------------------------------------ *
- *  Navigation
- * ------------------------------------------------------------------ */
 function setTab(t, silent) {
   if (!TABS[t] || t === ui.tab) return;
   ui.tab = t; ui.confirm = null; if (!silent) Sound.play('tab'); render();
@@ -1079,12 +1090,9 @@ function selectIndex(i) {
   const items = currentItems(); if (!selectable(items[i])) return;
   const same = i === getSel(); setSel(i); ui.confirm = null; Sound.play('focus', 0.5);
   renderList(); renderDetail();
-  if (items[i].type === 'add' && !same) { /* wait for explicit activation */ }
+  if (items[i].type === 'add' && !same) {  }
 }
 
-/* ------------------------------------------------------------------ *
- *  Inline editing (data-bind)
- * ------------------------------------------------------------------ */
 function applyBind(path, raw) {
   const p = path.split('.'), kind = p[0];
   if (kind === 'bio') state.bio[p[1]] = raw;
@@ -1106,25 +1114,16 @@ function applyBind(path, raw) {
   save(); clampVitals(); refreshHUD(); renderChrome();
 }
 
-/* ------------------------------------------------------------------ *
- *  Toast
- * ------------------------------------------------------------------ */
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1400);
 }
 
-/* ------------------------------------------------------------------ *
- *  Clock
- * ------------------------------------------------------------------ */
 function tickClock() {
   const ms = state.clock.game + (Date.now() - state.clock.real) * CLOCK_SCALE, d = new Date(ms);
   $('#sbTime').textContent = `${pad(d.getUTCDate())} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
-/* ------------------------------------------------------------------ *
- *  Boot sequence
- * ------------------------------------------------------------------ */
 function runBoot() {
   const boot = $('#boot'), out = $('#bootText');
   const lines = [
@@ -1158,9 +1157,6 @@ function runBoot() {
   boot.focus();
 }
 
-/* ------------------------------------------------------------------ *
- *  Event wiring
- * ------------------------------------------------------------------ */
 function wire() {
   $('#mainTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
   $('#subTabs').addEventListener('click', e => { const b = e.target.closest('[data-sub]'); if (b) setSub(b.dataset.sub); });
@@ -1186,7 +1182,7 @@ function wire() {
     if (act !== 'use') Sound.play(act === 'radiopower' ? 'focus' : 'click');
     fn(Object.assign({}, b.dataset));
     if (SOFT_ACTIONS.has(act)) return;
-    if (act === 'radiopower') return;   // setRadio already rendered
+    if (act === 'radiopower') return;
     refreshAfterChange();
   });
   detail.addEventListener('input', e => {
@@ -1206,21 +1202,18 @@ function wire() {
     if (e.key === 'Escape') e.target.blur();
   });
 
-  // Click a limb on the Vault Boy diagram
   detail.addEventListener('click', e => {
     const l = e.target.closest('[data-limb]'); if (!l) return;
     const items = currentItems(), i = items.findIndex(x => x.key === l.dataset.limb);
     if (i >= 0) { setSel(i); Sound.play('focus'); renderList(); renderDetail(); }
   });
 
-  // Caps (editable in the status bar)
   const caps = $('#sbCaps');
   caps.addEventListener('focus', () => { const r = document.createRange(); r.selectNodeContents(caps); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
   caps.addEventListener('input', () => { state.caps = Math.max(0, parseInt(caps.textContent.replace(/\D/g, ''), 10) || 0); save(); renderChrome(); });
   caps.addEventListener('blur', () => { state.caps = Math.max(0, parseInt(caps.textContent.replace(/\D/g, ''), 10) || 0); caps.textContent = pad(state.caps, 3); save(); renderChrome(); });
   caps.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); caps.blur(); } else if (e.key.length === 1 && !/\d/.test(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault(); });
 
-  // Global keyboard control
   document.addEventListener('keydown', e => {
     const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1245,9 +1238,6 @@ function wire() {
   });
 }
 
-/* ------------------------------------------------------------------ *
- *  Init
- * ------------------------------------------------------------------ */
 function init() {
   Sound.init();
   clampVitals();
