@@ -501,73 +501,121 @@ const portraitBox = (cls = '') => portrait
   ? `<div class="portrait ${portrait.tint ? 'tinted' : ''} ${cls}" data-act="portraitup" title="Click to change portrait"><img src="${portrait.src}" alt="Character portrait"></div>`
   : `<button type="button" class="portrait empty ${cls}" data-act="portraitup"><span>+<br>ADD<br>PORTRAIT</span></button>`;
 
+/* ---------- STATUS IMAGE (replaces the Vault Boy limb diagram) ----------
+ * One big picture on the Status screen. Upload your own; until then the stock
+ * vault_boy.png is shown in Pip-Boy amber. Stored in this browser only. */
+const STATUS_IMG_KEY = 'pipboy3000a.statusimg.v1';
+const STATUS_IMG_DEFAULT = './assets/images/vault_boy.png';
+let statusImg = loadStatusImg();
+function loadStatusImg() {
+  try {
+    const o = JSON.parse(localStorage.getItem(STATUS_IMG_KEY) || 'null');
+    return o && typeof o.src === 'string' && o.src.startsWith('data:image/') ? { src:o.src, tint:o.tint !== false } : null;
+  } catch (e) { return null; }
+}
+function saveStatusImg() {
+  try { statusImg ? localStorage.setItem(STATUS_IMG_KEY, JSON.stringify(statusImg)) : localStorage.removeItem(STATUS_IMG_KEY); }
+  catch (e) { toast('IMAGE TOO LARGE TO SAVE'); }
+}
+let statusPicker = null;
+function pickStatusImg() {
+  statusPicker = document.createElement('input');
+  statusPicker.type = 'file'; statusPicker.accept = 'image/*';
+  statusPicker.addEventListener('change', () => { const f = statusPicker.files && statusPicker.files[0]; if (f) loadStatusFile(f); });
+  statusPicker.click();
+}
+function loadStatusFile(file) {
+  if (!file.type.startsWith('image/')) { toast('NOT AN IMAGE FILE'); return; }
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const sc = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    statusImg = { src: c.toDataURL('image/jpeg', .88), tint: statusImg ? statusImg.tint : true };
+    saveStatusImg(); toast('IMAGE LOADED'); render();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('COULD NOT READ IMAGE'); };
+  img.src = url;
+}
+const statusImgBox = () => {
+  const custom = !!statusImg, tint = custom ? statusImg.tint : true;
+  return `<div class="status-img ${tint ? 'tinted' : ''} ${custom ? '' : 'stock'}" data-act="statusup" title="Click to change image">
+    <img src="${custom ? statusImg.src : STATUS_IMG_DEFAULT}" alt="Status image">
+    ${custom ? '' : '<span class="status-hint">CLICK TO ADD IMAGE</span>'}</div>`;
+};
+
 /* ---------- STAT / STATUS ---------- */
 SCREENS['stat.status'] = {
-  list() {
-    return [
-      { key:'general', name:'GENERAL' },
-      ...LIMBS.map(l => ({ key:l.k, name:l.name, val: limbPct(l.k) + '%' })),
-      { key:'rads', name:'RADIATION', val: state.rads }
-    ];
-  },
+  list: () => [{ key:'general', name:'GENERAL' }],
   head: () => '<span>CONDITION</span><span>STATE</span>',
   foot: () => `<span>HP ${state.hp}/${maxHp()}</span><span>DR ${totalDR()}</span>`,
-  detail(item) {
-    const limb = LIMBS.find(l => l.k === item.key);
+  detail() {
+    const b = state.bio, S = state.special;
+    const f = (k, ph, label) => fld('bio.' + k, b[k], { ph, label });
     const hpPct = state.hp / maxHp() * 100, apPct = state.ap / maxAp() * 100;
-    let right = '';
-    if (item.key === 'general') {
-      right = `
-        ${titleRow('GENERAL', 'LVL ' + state.level)}
-        <div class="idrow">
-          ${portraitBox('sm')}
-          <div class="idtext">
-            <div class="idname">${esc(state.bio.name)}</div>
-            ${kv('OCCUPATION', esc(state.bio.occupation))}
-            ${kv('LEVEL', state.level)}
-            ${kv('KARMA', karmaTier().name)}
-          </div>
-        </div>
-        <div class="panel">
-          <div class="barline"><span class="lab">HP</span>${bar(hpPct, hpPct < 25 ? 'low' : '')}<span class="num">${state.hp}/${maxHp()}</span></div>
-          <div class="barline"><span class="lab">AP</span>${bar(apPct)}<span class="num">${state.ap}/${maxAp()}</span></div>
-        </div>
-        <div class="panel">
-          ${kv(ico('armor') + ' DAMAGE RESIST. (DR)', totalDR())}
-          ${kv(ico('radiation') + ' RADIATION', state.rads + ' <small>RADS</small>')}
-          ${kv('RAD SICKNESS', radSickness(state.rads))}
-          ${kv('CARRY WEIGHT', fmt1(weightNow()) + ' / ' + carryCap())}
-          ${kv('MAX HP <small>(100 + END x 20)</small>', maxHp())}
-          ${kv('MAX AP <small>(65 + AGI x 3)</small>', maxAp())}
-        </div>`;
-    } else if (limb) {
-      const p = limbPct(limb.k);
-      right = `
-        ${titleRow(limb.name, p <= 0 ? 'CRIPPLED' : p < 50 ? 'INJURED' : 'HEALTHY')}
-        <div class="panel"><div class="ph">LIMB CONDITION</div>
-          <div class="barline">${bar(p, p < 25 ? 'low' : '')}<span class="num">${p}%</span></div>
-        </div>
-        <div class="desc">${limb.k === 'head' ? 'A crippled head impairs perception and can cause concussion effects.'
-          : limb.k === 'torso' ? 'Torso condition determines your overall resilience to heavy damage.'
-          : limb.k.endsWith('arm') ? 'A crippled arm reduces weapon accuracy and melee effectiveness.'
-          : 'A crippled leg slows movement and prevents sprinting.'}</div>`;
-    } else {
-      right = `
-        ${titleRow('RADIATION', radSickness(state.rads))}
-        <div class="panel"><div class="ph">${ico('radiation')} ACCUMULATED RADS</div>
-          <div class="barline">${bar(state.rads / 10, (state.rads >= 800 ? 'low ' : '') + (state.rads > 0 ? 'rad-flicker' : ''))}<span class="num">${state.rads}</span></div>
-        </div>
-        <div class="desc">Radiation accrues from contaminated food, water and ground. At 200 RADS minor sickness sets in; at 800 it is deadly. RadAway flushes it from your system.</div>`;
-    }
-    const selKey = limb ? limb.k : null;
-    return `<div class="vb-wrap"><div>${vaultBoySvg(selKey)}</div><div style="display:flex;flex-direction:column;gap:.7em;min-width:0">${right}</div></div>`;
+    const limbRows = LIMBS.map(l => {
+      const p = limbPct(l.k);
+      return `<div class="barline"><span class="lab" style="min-width:6.2em">${l.name}</span>${bar(p, p < 25 ? 'low' : '')}${fld('stat.limb.' + l.k, p, { type:'number', cls:'num', label:l.name })}</div>`;
+    }).join('');
+    const inv = state.items.filter(i => i.qty > 0 || i.cat === 'weapons' || i.cat === 'apparel');
+    const invRows = inv.length
+      ? inv.map(i => kv(esc(i.name) + (equipTag(i) ? ' <small>' + equipTag(i) + '</small>' : ''), (i.cat === 'weapons' || i.cat === 'apparel') && i.qty <= 1 ? '' : 'x' + i.qty)).join('')
+      : '<div class="desc">Nothing carried.</div>';
+    const bgNote = state.notes[0];
+    const wpn = (w, n) => `
+      <div class="ph">WEAPON NUMBER ${n}${w ? ' - ' + esc(w.name) : ''}</div>
+      ${kv('DAM | AP COST', w ? `${w.dmg} DAM | ${w.ap} AP COST` : '# DAM | # AP COST')}
+      ${w ? kv('AMMO / VATS USE', `${esc(w.ammo || 'N/A')} <small>x${w.vatsAmmo} per use</small>`) + kv('DPS', fmt1(dps(w))) : ''}`;
+    const w1 = getItem(state.equip.w1), w2 = getItem(state.equip.w2);
+    const right = `
+      ${titleRow('GENERAL', 'LVL ' + state.level)}
+      <div class="panel"><div class="ph">IDENTITY</div>
+        <div class="form">
+          <label>Name / Nickname</label>${f('name', 'Full name or alias')}
+          <label>Date of Birth</label>${f('dob', 'DD MON YYYY')}
+          <label>Physiology</label>${sel('bio.physiology', b.physiology, ['Human', 'Ghoul', 'Supermutant', 'Robot'])}
+          <label>Allegiance</label>${f('allegiance', 'Faction or none')}
+          <label>Occupation</label>${f('occupation', 'Occupation')}
+          <label>Rank / Title</label>${f('rank', 'If applicable')}
+        </div></div>
+      <div class="panel"><div class="ph">PHYSICAL DESCRIPTION</div>
+        <div class="form">
+          <label>Height</label>${f('height', `e.g. 5'11"`)}
+          <label>Weight</label>${f('weight', 'e.g. 170 LBS')}
+          <label>Hair Description</label>${f('hairDesc', 'Length, style')}
+          <label>Hair Color</label>${f('hairColor', 'Color')}
+          <label>Eye Color</label>${f('eyes', 'Color')}
+          <label>Skin Color</label>${f('skin', 'Tone / condition')}
+          <label>Body Type</label>${sel('bio.bodyType', b.bodyType, ['Endomorphic', 'Mesomorphic', 'Ectomorphic'])}
+          <label>Scars / Blemishes</label>${f('scars', 'Distinguishing marks')}
+        </div></div>
+      <div class="panel"><div class="ph">PERSONALITY DESCRIPTION</div>
+        <textarea class="fld" rows="5" data-bind="bio.personality" placeholder="How the character is expected to behave..." spellcheck="false" aria-label="Personality description">${esc(b.personality)}</textarea></div>
+      <div class="panel"><div class="ph">S.P.E.C.I.A.L.</div>
+        ${kv('S / P / E / C', `${S.S} / ${S.P} / ${S.E} / ${S.C}`)}
+        ${kv('I / A / L', `${S.I} / ${S.A} / ${S.L}`)}
+        <div class="desc">Edit ranks on the S.P.E.C.I.A.L. tab.</div></div>
+      <div class="panel"><div class="ph">INVENTORY</div>${invRows}
+        ${kv('CARRY WEIGHT', fmt1(weightNow()) + ' / ' + carryCap())}</div>
+      <div class="panel"><div class="ph">BACKGROUND</div>
+        ${bgNote ? `<textarea class="fld" rows="7" data-bind="note.${bgNote.id}.body" placeholder="Background, links are fine..." spellcheck="false" aria-label="Background">${esc(bgNote.body)}</textarea>` : '<div class="desc">Add a note on the DATA > Notes tab.</div>'}</div>
+      <div class="panel"><div class="ph">RPG MECHANICS</div>
+        <div class="barline"><span class="lab">HP</span>${bar(hpPct, hpPct < 25 ? 'low' : '')}<span class="num">${fld('stat.hp', state.hp, { type:'number', cls:'num', label:'HP' })}</span><span class="num">/ ${maxHp()}</span></div>
+        <div class="desc">100 + Endurance x 20</div>
+        ${kv(ico('armor') + ' DR (DAMAGE REDUCTION)', totalDR())}
+        <div class="barline"><span class="lab">AP</span>${bar(apPct)}<span class="num">${fld('stat.ap', state.ap, { type:'number', cls:'num', label:'AP' })}</span><span class="num">/ ${maxAp()}</span></div>
+        <div class="desc">65 + 3 x Agility</div>
+        ${kv(ico('radiation') + ' RADIATION', fld('stat.rads', state.rads, { type:'number', cls:'num', label:'Rads' }))}
+        ${kv('RAD SICKNESS', radSickness(state.rads))}
+        ${kv('KARMA', karmaTier().name)}</div>
+      <div class="panel"><div class="ph">DAM &amp; AP USE</div>${wpn(w1, 1)}<div style="height:.6em"></div>${wpn(w2, 2)}
+        <div class="desc">Change equipped weapons on the ITEMS tab.</div></div>
+      <div class="panel"><div class="ph">LIMB CONDITION</div>${limbRows}</div>
+      <div class="btnrow">${btn(statusImg ? 'CHANGE IMAGE' : 'ADD IMAGE', 'statusup')}${statusImg ? btn('TERMINAL TINT', 'statustint', {}, statusImg.tint ? 'on' : '') + btn('REMOVE', 'statusdel') : ''}</div>`;
+    return `<div class="vb-wrap"><div class="status-stage">${statusImgBox()}</div><div style="display:flex;flex-direction:column;gap:.7em;min-width:0">${right}</div></div>`;
   },
-  adjust(item, d) {
-    if (item.key === 'general') { state.hp += d * 5; }
-    else if (item.key === 'rads') { state.rads += d * 10; }
-    else { state.limbs[item.key] = clamp(state.limbs[item.key] + d * 10, 0, 100); }
-    clampVitals();
-  }
+  adjust(item, d) { state.hp += d * 5; clampVitals(); }
 };
 
 SCREENS['stat.special'] = {
@@ -1115,6 +1163,9 @@ const actions = {
   skadj: d => skillInvest(d.k, num(d.d)),
   tag:   d => toggleTag(d.k),
   perk:  d => togglePerk(d.k),
+  statusup: () => pickStatusImg(),
+  statusdel: () => { statusImg = null; saveStatusImg(); toast('IMAGE REMOVED'); },
+  statustint: () => { if (statusImg) { statusImg.tint = !statusImg.tint; saveStatusImg(); } },
   portraitup: () => pickPortrait(),
   portraitdel: () => { portrait = null; savePortrait(); toast('PORTRAIT REMOVED'); },
   portraittint: () => { if (portrait) { portrait.tint = !portrait.tint; savePortrait(); } },
@@ -1169,7 +1220,7 @@ const actions = {
   },
   reset: () => {
     if (ui.confirm !== 'reset') { armConfirm('reset'); return; }
-    ui.confirm = null; Sound.radioStop(); portrait = null; savePortrait();
+    ui.confirm = null; Sound.radioStop(); portrait = null; savePortrait(); statusImg = null; saveStatusImg();
     const keepOn = false; state = defaultState(); state.radio.on = keepOn;
     try { localStorage.removeItem(SAVE_KEY); } catch (e) {  }
     ui.sel = {}; toast('DATA RESET');
@@ -1177,7 +1228,7 @@ const actions = {
   radiopower: () => { setRadio(!state.radio.on); },
   tune: d => { tuneTo(state.radio.freq + num(d.d)); }
 };
-const SOFT_ACTIONS = new Set(['tune', 'portraitup']);
+const SOFT_ACTIONS = new Set(['tune', 'portraitup', 'statusup']);
 
 function armConfirm(key) {
   ui.confirm = key; clearTimeout(armConfirm.t);
@@ -1271,6 +1322,12 @@ function selectIndex(i) {
 function applyBind(path, raw) {
   const p = path.split('.'), kind = p[0];
   if (kind === 'bio') state.bio[p[1]] = raw;
+  else if (kind === 'stat') {
+    if (p[1] === 'rads') state.rads = num(raw);
+    else if (p[1] === 'hp') state.hp = num(raw);
+    else if (p[1] === 'ap') state.ap = num(raw);
+    else if (p[1] === 'limb' && state.limbs[p[2]] !== undefined) state.limbs[p[2]] = clamp(num(raw), 0, 100);
+  }
   else if (kind === 'item') {
     const it = getItem(p[1]); if (!it) return;
     const k = p[2];

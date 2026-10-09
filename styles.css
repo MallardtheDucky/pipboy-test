@@ -315,7 +315,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .portrait.tinted img { filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(-14deg) brightness(.95) contrast(1.2); }
 .portrait::after { content: ""; position: absolute; inset: 4px; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
 .portrait.sm { width: 7.2em; height: 9.2em; }
-.portrait.lg { width: min(100%, 12em); aspect-ratio: 4 / 5; }
+.portrait.lg { width: min(100%, 17em); aspect-ratio: 4 / 5; }
 .portrait.empty { font: inherit; color: var(--dim); text-shadow: inherit; border-style: dashed; display: grid; place-items: center; text-align: center; letter-spacing: .14em; font-size: .8em; line-height: 1.5; }
 .portrait.empty:hover { color: var(--amber-hi); background: var(--ghost); }
 .portrait-stage { display: flex; justify-content: center; }
@@ -373,3 +373,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .pb-btn:focus-visible { outline: 2px solid #ffd68a; outline-offset: 2px; border-radius: 6px; }
   .legend { margin-top: .6vh; }
 }
+
+/* ---------- status image (replaces Vault Boy diagram) ---------- */
+.status-stage { position: sticky; top: 0; align-self: start; display: flex; justify-content: center; align-items: center; min-width: 0; }
+.status-img { position: relative; width: min(100%, 17em); height: auto; aspect-ratio: 3 / 4; padding: 6px; border: 1px solid var(--amber); background: rgba(0,0,0,.35); cursor: pointer; box-shadow: 0 0 14px rgba(240,176,76,.3), inset 0 0 18px rgba(240,176,76,.12); overflow: hidden; }
+.status-img img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.status-img.tinted img { filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(-14deg) brightness(.95) contrast(1.2) drop-shadow(0 0 5px rgba(240,176,76,.5)); }
+.status-img.stock img { filter: url(#amberize) drop-shadow(0 0 5px rgba(240,176,76,.6)); }
+.status-img::after { content: ""; position: absolute; inset: 6px; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+.status-img:hover { background: var(--ghost); }
+.status-hint { position: absolute; left: 7px; right: 7px; bottom: 7px; padding: 3px 0; background: rgba(0,0,0,.75); text-align: center; font-size: .75em; letter-spacing: .16em; color: var(--dim); z-index: 1; }
+.status-img:hover .status-hint { color: var(--amber-hi); }
+.vb-wrap .form { grid-template-columns: 7.6em minmax(0,1fr); }
