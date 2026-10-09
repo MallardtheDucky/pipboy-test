@@ -116,6 +116,8 @@ function defaultState() {
     tags: [],
     invested: {},
     perks: [],
+    karma: 0,
+    rep: {},
     limbs: { head:100, torso:100, larm:100, rarm:100, lleg:100, rleg:100 },
     items,
     equip: { w1:'w_pistol', w2:'w_rifle', head:'a_hat', body:'a_jump' },
@@ -149,6 +151,8 @@ function load() {
     const out = Object.assign({}, d, s);
     out.special = Object.assign({}, d.special, s.special);
     out.limbs   = Object.assign({}, d.limbs, s.limbs);
+    out.rep     = Object.assign({}, d.rep, s.rep);
+    if (!Number.isFinite(out.karma)) out.karma = 0;
     out.equip   = Object.assign({}, d.equip, s.equip);
     out.bio     = Object.assign({}, d.bio, s.bio);
     out.radio   = Object.assign({}, d.radio, s.radio);
@@ -287,7 +291,7 @@ const Sound = {
 };
 
 const TABS = {
-  stat: { label:'STATS', subs:[['status','Status'],['special','S.P.E.C.I.A.L.'],['skills','Skills'],['perks','Perks']] },
+  stat: { label:'STATS', subs:[['status','Status'],['special','S.P.E.C.I.A.L.'],['skills','Skills'],['perks','Perks'],['general','General']] },
   inv:  { label:'ITEMS', subs:[['weapons','Weapons'],['apparel','Apparel'],['aid','Aid'],['misc','Misc'],['ammo','Ammo']] },
   data: { label:'DATA',  subs:[['bio','Bio'],['notes','Notes'],['radio','Radio']] }
 };
@@ -303,6 +307,43 @@ const bar = (pct, cls = '') => `<div class="bar ${cls}"><i style="width:${clamp(
 const dataAttrs = d => Object.entries(d).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
 const btn = (label, act, d = {}, cls = '', extra = '') => `<button type="button" class="btn ${cls}" data-act="${act}" ${dataAttrs(d)} ${extra}>${label}</button>`;
 const ico = name => `<img class="ico" src="./assets/images/status/${name}.svg" alt="">`;
+
+/* ---------- icon library (assets/images/icons/<group>/<name>.png, listed in icons.js) ---------- */
+const iconSrc = (g, n) => `./assets/images/icons/${g}/${n}.png`;
+const iconHas = (g, n) => !!(typeof ICON_SETS !== 'undefined' && ICON_SETS[g] && ICON_SETS[g].includes(n));
+const ICON_STOP = new Set(['item','items','weapons','apperal','appearal','apparel','perk','the','of','a']);
+const iconToks = str => String(str).toLowerCase().replace(/[.']/g, '').split(/[^a-z0-9]+/).filter(t => t && !ICON_STOP.has(t));
+function iconFuzzy(groups, name) {
+  const want = new Set(iconToks(name)); if (!want.size || typeof ICON_SETS === 'undefined') return null;
+  let best = null, bs = 0;
+  for (const g of groups) for (const slug of (ICON_SETS[g] || [])) {
+    const have = iconToks(slug); if (!have.length) continue;
+    const hit = have.filter(t => want.has(t)).length; if (!hit) continue;
+    const sc = hit / (have.length + want.size - hit) + (have.length === want.size && hit === want.size ? 1 : 0);
+    if (sc > bs) { bs = sc; best = [g, slug]; }
+  }
+  return bs >= 0.5 ? best : null;
+}
+const ITEM_ICON_ID = {
+  w_pistol:['weapons','weapons_9mm_pistol'], w_rifle:['weapons','weapons_hunting_rifle'], w_357:['weapons','weapons_357_revolver'],
+  w_knife:['weapons','weapons_combat_knife'], w_laser:['weapons','weapons_laser_pistol'],
+  a_jump:['apparel','apperal_vault_21_jumpsuit_armored'], a_leather:['apparel','apperal_leather_armor'],
+  a_combat:['apparel','appearal_combat_armor'], a_hat:['apparel','apparel_ranger_hat_1'],
+  d_stim:['items','items_stimpack'], d_rada:['items','items_radaway'], d_water:['items','items_water'], d_nuka:['items','items_cola'], d_radx:['items','item_rad_x'],
+  m_tape:['items','item_junk'], m_scrap:['items','item_junk'], m_tin:['items','item_junk'], m_money:['items','items_money_ncr_20'], m_deck:['items','item_playing_card'],
+  x_9mm:['items','items_9mm_ammo'], x_308:['items','items_308_ammo'], x_357:['items','items_357_magnum_round'], x_mfc:['items','items_energy_cell']
+};
+const CAT_ICON_GROUPS = { weapons:['weapons'], apparel:['apparel'], aid:['items'], misc:['items'], ammo:['items'] };
+const CAT_ICON_FALLBACK = { weapons:['weapons','weapons_baton'], apparel:['apparel','vault_suit'], aid:['items','items_stimpack'], misc:['items','item_junk'], ammo:['items','items_5mm_box'] };
+function itemIcon(i) {
+  return ITEM_ICON_ID[i.id] || iconFuzzy(CAT_ICON_GROUPS[i.cat] || ['items'], i.name) || CAT_ICON_FALLBACK[i.cat];
+}
+const iconBox = (ic, label = '') => (ic && iconHas(ic[0], ic[1]))
+  ? `<div class="tint icon-box"><img src="${iconSrc(ic[0], ic[1])}" alt="${esc(label)}"></div>` : '';
+const PERK_ICON = { swift:'perk_swift_learner', intense:'perk_intense_training', tough:'perk_toughness', aware:'perk_enhanced_sensors', lady:'perk_lady_killer',
+  lightstep:'perk_light_step', educated:'perk_educated', rad:'perk_rad_resistance', pack:'perk_pack_rat', strong:'perk_strong_back', finesse:'perk_finesse', gunslinger:'perk_gunslinger' };
+const SKILL_ICON = { barter:'skills_barter', energy:'skills_energy_weapons', explo:'skills_explosives', guns:'skills_small_guns', lock:'skills_lockpick', med:'skills_medicine',
+  melee:'skills_melee_weapons', repair:'skills_repair', science:'skills_science', sneak:'skills_sneak', speech:'skills_speech', unarmed:'skills_unarmed' };
 const fld = (path, val, o = {}) => {
   const type = o.type || 'text';
   return `<input class="fld ${o.cls || ''}" type="${type}" ${type === 'number' ? 'step="any"' : ''} data-bind="${path}" value="${esc(val)}" ${o.ph ? `placeholder="${esc(o.ph)}"` : ''} spellcheck="false" autocomplete="off" aria-label="${esc(o.label || path)}">`;
@@ -422,6 +463,44 @@ function limbBars(selKey) {
  * ------------------------------------------------------------------ */
 const SCREENS = {};
 
+/* ---------- character portrait (uploaded image, kept in localStorage separately from the sheet) ---------- */
+const PORTRAIT_KEY = 'pipboy3000a.portrait.v1';
+let portrait = loadPortrait();
+function loadPortrait() {
+  try {
+    const o = JSON.parse(localStorage.getItem(PORTRAIT_KEY) || 'null');
+    return o && typeof o.src === 'string' && o.src.startsWith('data:image/') ? { src:o.src, tint:o.tint !== false } : null;
+  } catch (e) { return null; }
+}
+function savePortrait() {
+  try { portrait ? localStorage.setItem(PORTRAIT_KEY, JSON.stringify(portrait)) : localStorage.removeItem(PORTRAIT_KEY); }
+  catch (e) { toast('IMAGE TOO LARGE TO SAVE'); }
+}
+let portraitPicker = null;
+function pickPortrait() {
+  portraitPicker = document.createElement('input');
+  portraitPicker.type = 'file'; portraitPicker.accept = 'image/*';
+  portraitPicker.addEventListener('change', () => { const f = portraitPicker.files && portraitPicker.files[0]; if (f) loadPortraitFile(f); });
+  portraitPicker.click();
+}
+function loadPortraitFile(file) {
+  if (!file.type.startsWith('image/')) { toast('NOT AN IMAGE FILE'); return; }
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const sc = Math.min(1, 520 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    portrait = { src: c.toDataURL('image/jpeg', .86), tint: portrait ? portrait.tint : true };
+    savePortrait(); toast('PORTRAIT LOADED'); render();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('COULD NOT READ IMAGE'); };
+  img.src = url;
+}
+const portraitBox = (cls = '') => portrait
+  ? `<div class="portrait ${portrait.tint ? 'tinted' : ''} ${cls}" data-act="portraitup" title="Click to change portrait"><img src="${portrait.src}" alt="Character portrait"></div>`
+  : `<button type="button" class="portrait empty ${cls}" data-act="portraitup"><span>+<br>ADD<br>PORTRAIT</span></button>`;
+
 /* ---------- STAT / STATUS ---------- */
 SCREENS['stat.status'] = {
   list() {
@@ -440,6 +519,15 @@ SCREENS['stat.status'] = {
     if (item.key === 'general') {
       right = `
         ${titleRow('GENERAL', 'LVL ' + state.level)}
+        <div class="idrow">
+          ${portraitBox('sm')}
+          <div class="idtext">
+            <div class="idname">${esc(state.bio.name)}</div>
+            ${kv('OCCUPATION', esc(state.bio.occupation))}
+            ${kv('LEVEL', state.level)}
+            ${kv('KARMA', karmaTier().name)}
+          </div>
+        </div>
         <div class="panel">
           <div class="barline"><span class="lab">HP</span>${bar(hpPct, hpPct < 25 ? 'low' : '')}<span class="num">${state.hp}/${maxHp()}</span></div>
           <div class="barline"><span class="lab">AP</span>${bar(apPct)}<span class="num">${state.ap}/${maxAp()}</span></div>
@@ -518,6 +606,7 @@ SCREENS['stat.skills'] = {
     const an = SPECIAL_DEFS.find(x => x.k === d.a).name;
     return `
       ${titleRow(d.name, tagged ? 'TAGGED' : 'SKILL')}
+      ${iconBox(SKILL_ICON[d.id] ? ['skills', SKILL_ICON[d.id]] : ['perks', 'perk_survivalist'], d.name)}
       <div class="big-stat"><span class="n">${s.total}</span></div>
       ${bar(s.total)}
       <div class="desc">${esc(d.desc)}</div>
@@ -544,6 +633,7 @@ SCREENS['stat.perks'] = {
     const reqs = Object.entries(p.req).map(([k, v]) => `${SPECIAL_DEFS.find(x => x.k === k).name} ${v}`);
     return `
       ${titleRow(p.name, taken ? 'ACTIVE' : ok ? 'AVAILABLE' : 'LOCKED')}
+      ${iconBox(['perks', PERK_ICON[p.id]], p.name)}
       <div class="panel"><div class="ph">PERK CARD</div>
         ${kv('REQUIRED LEVEL', p.lvl)}
         ${kv('REQUIRED ATTRIBUTES', reqs.length ? reqs.join(', ') : 'NONE')}
@@ -555,6 +645,79 @@ SCREENS['stat.perks'] = {
   },
   activate(item) { togglePerk(item.key); }
 };
+
+/* ---------- STAT / GENERAL (karma, reputation, derived statistics) ---------- */
+const KARMA_TIERS = [
+  { max:-750, name:'VERY EVIL', ic:'karma_evil',    desc:'Your name is spoken in whispers. Good folk cross the road to avoid you.' },
+  { max:-250, name:'EVIL',      ic:'karma_bad',     desc:'You have done more harm than good, and the Mojave remembers.' },
+  { max: 250, name:'NEUTRAL',   ic:'karma_neutral', desc:'A little good, a little bad. The wasteland has not made up its mind about you.' },
+  { max: 750, name:'GOOD',      ic:'karma_good',    desc:'People are glad to see you coming. Mostly.' },
+  { max:1001, name:'VERY GOOD', ic:'karma_saintly', desc:'A shining example in a place that has very few. Try not to let it go to your head.' }
+];
+const karmaTier = () => KARMA_TIERS.find(t => state.karma < t.max) || KARMA_TIERS[KARMA_TIERS.length - 1];
+const REP_LEVELS = ['VILIFIED', 'SHUNNED', 'MIXED', 'NEUTRAL', 'ACCEPTED', 'LIKED', 'IDOLIZED'];
+const FACTIONS = [
+  ['boomers','BOOMERS','reputations_boomers'], ['bos','BROTHERHOOD OF STEEL','reputations_brotherhood_of_steel'], ['legion',"CAESAR'S LEGION",'reputations_caesars_legion'],
+  ['followers','FOLLOWERS OF THE APOCALYPSE','reputations_followers_apocalypse'], ['freeside','FREESIDE','reputations_freeside'],
+  ['goodsprings','GOODSPRINGS','reputations_goodsprings'], ['khans','GREAT KHANS','reputations_great_khans'], ['ncr','NEW CALIFORNIA REPUBLIC','reputations_ncr'],
+  ['novac','NOVAC','reputations_novac'], ['powder','POWDER GANGERS','reputations_powder_ganger'], ['primm','PRIMM','reputations_primm'],
+  ['strip','THE STRIP','reputations_the_strip'], ['wgs','WHITE GLOVE SOCIETY','reputations_white_glove_society']
+];
+const repLevel = id => clamp(state.rep && id in state.rep ? state.rep[id] : 3, 0, REP_LEVELS.length - 1);
+const critChance = () => state.special.L + (perkTaken('finesse') ? 5 : 0);
+const DERIVED = [
+  { k:'hp',   name:'HIT POINTS',           ic:'hit_points',           v: () => maxHp(),                                  d:'Total health. 100 + Endurance x 20.' },
+  { k:'ap',   name:'ACTION POINTS',        ic:'actions_points',       v: () => maxAp(),                                  d:'Fuel for V.A.T.S. 65 + Agility x 3.' },
+  { k:'cw',   name:'CARRY WEIGHT',         ic:'carry_weight',         v: () => carryCap() + ' LBS',                      d:'How much you can haul before you are slowed. 150 + Strength x 10, plus perks.' },
+  { k:'dr',   name:'DAMAGE RESISTANCE',    ic:'damage_resistance',    v: () => totalDR(),                                d:'Flat damage soaked by your equipped apparel and perks.' },
+  { k:'rr',   name:'RADIATION RESISTANCE', ic:'radiation_resistance', v: () => ((state.special.E - 1) * 2 + (perkTaken('rad') ? 25 : 0)) + '%', d:'Share of incoming radiation shrugged off. (Endurance - 1) x 2%, plus Rad Resistance.' },
+  { k:'pr',   name:'POISON RESISTANCE',    ic:'poison_resistance',    v: () => ((state.special.E - 1) * 5) + '%',        d:'Share of poison damage resisted. (Endurance - 1) x 5%.' },
+  { k:'cc',   name:'CRITICAL CHANCE',      ic:'critical_chance',      v: () => critChance() + '%',                       d:'Chance for any attack to be a critical hit. Equal to Luck, plus Finesse.' },
+  { k:'md',   name:'MELEE DAMAGE',         ic:'melee_damage',         v: () => fmt1(state.special.S * 0.5),              d:'Bonus damage on melee and unarmed attacks. Strength x 0.5.' }
+];
+SCREENS['stat.general'] = {
+  list: () => [
+    { key:'karma', name:'KARMA', val: karmaTier().name },
+    { type:'sep', name:'REPUTATION' },
+    ...FACTIONS.map(f => ({ key:'rep:' + f[0], name:f[1], val: REP_LEVELS[repLevel(f[0])] })),
+    { type:'sep', name:'DERIVED STATISTICS' },
+    ...DERIVED.map(x => ({ key:'d:' + x.k, name:x.name, val:x.v() }))
+  ],
+  head: () => '<span>GENERAL</span><span>STANDING</span>',
+  foot: () => `<span>KARMA ${state.karma > 0 ? '+' : ''}${state.karma}</span><span>${karmaTier().name}</span>`,
+  detail(item) {
+    if (item.key === 'karma') {
+      const t = karmaTier();
+      return `
+        ${titleRow('KARMA', t.name)}
+        ${iconBox(['karma', t.ic], t.name)}
+        <div class="big-stat">${btn('&minus;','karma',{d:-50},'sq')}<span class="n">${state.karma}</span>${btn('+','karma',{d:50},'sq')}</div>
+        <div class="desc">${esc(t.desc)}</div>
+        <div class="btnrow">${btn('RESET TO 0','karma',{d:0})}</div>`;
+    }
+    if (item.key.startsWith('rep:')) {
+      const f = FACTIONS.find(x => 'rep:' + x[0] === item.key), lv = repLevel(f[0]);
+      return `
+        ${titleRow(f[1], 'REPUTATION')}
+        ${iconBox(['rep', f[2]], f[1])}
+        <div class="big-stat">${btn('&minus;','rep',{k:f[0],d:-1},'sq', lv > 0 ? '' : 'disabled')}<span class="n sm">${REP_LEVELS[lv]}</span>${btn('+','rep',{k:f[0],d:1},'sq', lv < REP_LEVELS.length - 1 ? '' : 'disabled')}</div>
+        <div class="pips">${REP_LEVELS.map((_, i) => `<i class="${i <= lv ? 'f' : ''}"></i>`).join('')}</div>
+        <div class="desc">How ${tc(f[1])} regards you right now. Adjust it as your story unfolds.</div>`;
+    }
+    const x = DERIVED.find(y => 'd:' + y.k === item.key);
+    return `
+      ${titleRow(x.name, 'DERIVED')}
+      ${iconBox(['derived', x.ic], x.name)}
+      <div class="big-stat"><span class="n sm">${x.v()}</span></div>
+      <div class="desc">${esc(x.d)}</div>`;
+  },
+  adjust(item, d) {
+    if (item.key === 'karma') changeKarma(d * 50);
+    else if (item.key.startsWith('rep:')) changeRep(item.key.slice(4), d);
+  }
+};
+function changeKarma(d) { state.karma = d === 0 ? 0 : clamp(state.karma + d, -1000, 1000); save(); }
+function changeRep(id, d) { state.rep[id] = clamp(repLevel(id) + d, 0, REP_LEVELS.length - 1); save(); }
 
 /* ---------- INVENTORY (shared factory) ---------- */
 const CAT_LABEL = { weapons:'WEAPON', apparel:'APPAREL', aid:'AID', misc:'MISC ITEM', ammo:'AMMO' };
@@ -601,7 +764,7 @@ function invScreen(cat) {
     detail(item) {
       if (item.type === 'add') return `${titleRow('ADD ITEM', CAT_LABEL[cat])}<div class="desc">Create a new ${CAT_LABEL[cat].toLowerCase()} entry. Everything is inline-editable once created.</div><div class="btnrow">${btn('CREATE ITEM','additem')}</div>`;
       const i = getItem(item.id); if (!i) return '';
-      const nameRow = `<div class="title-row">${fld(`item.${i.id}.name`, i.name, { cls:'name', label:'Item name' })}<span class="tag">${CAT_LABEL[cat]}</span></div>`;
+      const nameRow = `<div class="title-row">${fld(`item.${i.id}.name`, i.name, { cls:'name', label:'Item name' })}<span class="tag">${CAT_LABEL[cat]}</span></div>${iconBox(itemIcon(i), i.name)}`;
       const dropBtn = btn(ui.confirm === 'drop:' + i.id ? 'CONFIRM DROP?' : 'DROP ITEM', 'drop', { id:i.id });
       const cndBar = `<div class="barline"><span class="lab">CND</span>${bar(i.cnd, i.cnd < 25 ? 'low' : '')}<span class="num">${i.cnd}%</span></div>`;
       const note = `<div class="kv"><span class="k">NOTES</span></div>${fld(`item.${i.id}.note`, i.note, { ph:'Description / notes', label:'Notes' })}`;
@@ -684,7 +847,7 @@ function invScreen(cat) {
 
 /* ---------- DATA / BIO ---------- */
 const BIO_SECTIONS = [
-  { key:'identity', name:'IDENTITY' }, { key:'physical', name:'PHYSICAL FEATURES' },
+  { key:'identity', name:'IDENTITY' }, { key:'portrait', name:'PORTRAIT' }, { key:'physical', name:'PHYSICAL FEATURES' },
   { key:'personality', name:'PERSONALITY' }, { key:'export', name:'EXPORT SHEET' }, { key:'reset', name:'RESET ALL DATA' }
 ];
 function exportSheet() {
@@ -749,6 +912,11 @@ SCREENS['data.bio'] = {
         <label>Occupation</label>${f('occupation', 'Occupation')}
         <label>Rank / Title</label>${f('rank', 'If applicable')}
       </div>`;
+    if (item.key === 'portrait') return `
+      ${titleRow('PORTRAIT', 'BIO / PROFILE')}
+      <div class="portrait-stage">${portraitBox('lg')}</div>
+      <div class="desc">Upload any image of your character (PNG, JPG, WEBP). It is shrunk and stored in this browser only, and appears on the Status screen.</div>
+      <div class="btnrow">${btn(portrait ? 'CHANGE IMAGE' : 'UPLOAD IMAGE', 'portraitup')}${portrait ? btn('TERMINAL TINT', 'portraittint', {}, portrait.tint ? 'on' : '') + btn('REMOVE', 'portraitdel') : ''}</div>`;
     if (item.key === 'physical') return `
       ${titleRow('PHYSICAL FEATURES', 'BIO / PROFILE')}
       <div class="form">
@@ -947,6 +1115,11 @@ const actions = {
   skadj: d => skillInvest(d.k, num(d.d)),
   tag:   d => toggleTag(d.k),
   perk:  d => togglePerk(d.k),
+  portraitup: () => pickPortrait(),
+  portraitdel: () => { portrait = null; savePortrait(); toast('PORTRAIT REMOVED'); },
+  portraittint: () => { if (portrait) { portrait.tint = !portrait.tint; savePortrait(); } },
+  karma: d => changeKarma(num(d.d)),
+  rep:   d => changeRep(d.k, num(d.d)),
   equipw:d => equipWeapon(d.id, num(d.s)),
   equipa:d => {
     const i = getItem(d.id), slot = i.slot === 'HEAD' ? 'head' : 'body';
@@ -996,7 +1169,7 @@ const actions = {
   },
   reset: () => {
     if (ui.confirm !== 'reset') { armConfirm('reset'); return; }
-    ui.confirm = null; Sound.radioStop();
+    ui.confirm = null; Sound.radioStop(); portrait = null; savePortrait();
     const keepOn = false; state = defaultState(); state.radio.on = keepOn;
     try { localStorage.removeItem(SAVE_KEY); } catch (e) {  }
     ui.sel = {}; toast('DATA RESET');
@@ -1004,7 +1177,7 @@ const actions = {
   radiopower: () => { setRadio(!state.radio.on); },
   tune: d => { tuneTo(state.radio.freq + num(d.d)); }
 };
-const SOFT_ACTIONS = new Set(['tune']);
+const SOFT_ACTIONS = new Set(['tune', 'portraitup']);
 
 function armConfirm(key) {
   ui.confirm = key; clearTimeout(armConfirm.t);
@@ -1020,6 +1193,7 @@ function renderTabs() {
     const on = b.dataset.tab === ui.tab;
     b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
   });
+  $$('.pb-btn').forEach(b => { const on = b.dataset.tab === ui.tab; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const t = TABS[ui.tab];
   $('#subTabs').innerHTML = t.subs.map(([k, l]) =>
     `<button type="button" class="tab ${ui.sub[ui.tab] === k ? 'active' : ''}" role="tab" data-sub="${k}" aria-selected="${ui.sub[ui.tab] === k}">${l}</button>`).join('');
@@ -1061,6 +1235,7 @@ function refreshHUD() {
   hpEl.textContent = `${state.hp}/${maxHp()}`;
   hpEl.classList.toggle('low', state.hp / maxHp() < 0.25);
   $('#sbLvl').textContent = state.level;
+  const pb = $('#pipboy'); if (pb) pb.style.setProperty('--rad', clamp(state.rads / 1000, 0, 1));
   $('#hdrLvl').textContent = 'LVL ' + state.level;
   $('#sbAp').textContent = `${state.ap}/${maxAp()}`;
   $('#sbRads').textContent = state.rads;
@@ -1158,6 +1333,7 @@ function runBoot() {
 }
 
 function wire() {
+  $$('.pb-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('#mainTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
   $('#subTabs').addEventListener('click', e => { const b = e.target.closest('[data-sub]'); if (b) setSub(b.dataset.sub); });
 

@@ -15,6 +15,16 @@
     </filter>
   </svg>
 
+  <div class="pipboy" id="pipboy">
+  <i class="pb-bezel" aria-hidden="true"></i>
+  <div class="pb-gauge" aria-hidden="true"><div class="pb-gauge-face"><i class="pb-needle"></i><b>x100</b></div></div>
+  <div class="pb-engrave pb-engrave-l" aria-hidden="true">PIP-BOY</div>
+  <div class="pb-engrave pb-engrave-b" aria-hidden="true">3000A</div>
+  <div class="pb-vents pb-vents-l" aria-hidden="true"></div>
+  <div class="pb-vents pb-vents-r" aria-hidden="true"></div>
+  <div class="pb-knob" aria-hidden="true"><i></i></div>
+  <div class="pb-studs pb-studs-l" aria-hidden="true"></div>
+  <div class="pb-studs pb-studs-r" aria-hidden="true"></div>
   <main class="frame" id="bezel">
     <div class="screen" id="screen" aria-label="Pip-Boy 3000A screen">
 
@@ -65,6 +75,12 @@
       <div class="fx fx-vignette"></div>
     </div>
   </main>
+  <div class="pb-plate">
+    <button type="button" class="pb-btn" data-tab="stat" aria-label="Stats"><span>STATS</span><i></i></button>
+    <button type="button" class="pb-btn" data-tab="inv" aria-label="Items"><span>ITEMS</span><i></i></button>
+    <button type="button" class="pb-btn" data-tab="data" aria-label="Data"><span>DATA</span><i></i></button>
+  </div>
+  </div>
 
   <div class="legend" id="legend">
     <span><b>Q / E</b> MAIN TAB</span>
@@ -75,6 +91,7 @@
     <span><b>M</b> MUTE</span>
   </div>
 
+  <script src="./icons.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

@@ -287,8 +287,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 .vb .hit { fill: transparent; stroke: none; cursor: pointer; transition: fill .15s; }
-.vb .hit:hover { fill: rgba(240,176,76,.10); }
-.vb .hit.sel { fill: rgba(240,176,76,.22); }
+.vb .hit:hover, .vb .hit.sel { fill: transparent; }
 .vb image { filter: drop-shadow(0 0 4px rgba(240,176,76,.35)); }
 
 /* ---- Vault Boy paper doll ---- */
@@ -304,3 +303,73 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .bar.rad-flicker > i { transform-origin: left center; animation: radflick .4s steps(1) infinite; }
 }
 @keyframes radflick { 0%{transform:scaleX(1)} 25%{transform:scaleX(.97)} 50%{transform:scaleX(1.03)} 75%{transform:scaleX(.985)} }
+
+/* ---------- icon library ---------- */
+.icon-box { width: 112px; height: 112px; align-self: center; flex: none; display: grid; place-items: center; padding: 8px; }
+.icon-box img { width: 100%; height: 100%; object-fit: contain; }
+.big-stat .n.sm { font-size: 1.5em; letter-spacing: .08em; min-width: 0; }
+
+/* ---------- character portrait ---------- */
+.portrait { position: relative; display: block; flex: none; padding: 4px; border: 1px solid var(--amber); background: rgba(0,0,0,.35); cursor: pointer; box-shadow: 0 0 10px rgba(240,176,76,.25); }
+.portrait img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.portrait.tinted img { filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(-14deg) brightness(.95) contrast(1.2); }
+.portrait::after { content: ""; position: absolute; inset: 4px; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+.portrait.sm { width: 7.2em; height: 9.2em; }
+.portrait.lg { width: min(100%, 12em); aspect-ratio: 4 / 5; }
+.portrait.empty { font: inherit; color: var(--dim); text-shadow: inherit; border-style: dashed; display: grid; place-items: center; text-align: center; letter-spacing: .14em; font-size: .8em; line-height: 1.5; }
+.portrait.empty:hover { color: var(--amber-hi); background: var(--ghost); }
+.portrait-stage { display: flex; justify-content: center; }
+.idrow { display: flex; gap: 1em; align-items: stretch; }
+.idtext { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: .15em; }
+.idname { font-size: 1.35em; font-weight: 700; letter-spacing: .08em; color: var(--amber-hi); margin-bottom: .2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+
+/* ---------- Pip-Boy casing (wide screens only) ---------- */
+.pipboy { position: relative; display: contents; }
+:where(.pipboy > :not(.frame):not(.legend)) { display: none; }
+@media (min-width: 861px) and (min-height: 561px) {
+  :root { --pbw: min(99vw, 152vh); --fs: clamp(11px, calc(var(--pbw) * .0132), 23px); }
+  .pipboy {
+    display: block; flex: none; width: var(--pbw); aspect-ratio: 1.66 / 1; container-type: normal; border-radius: 5% / 8%;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at 30% 10%, rgba(255,240,170,.35), transparent 55%),
+      linear-gradient(135deg, #7d5f14 0%, #d6ae45 16%, #9c751b 34%, #e9c964 52%, #8f6a17 74%, #c79d36 100%);
+    box-shadow: inset 0 0 0 calc(var(--pbw)*.004) rgba(255,236,160,.5), inset 0 0 calc(var(--pbw)*.05) rgba(50,30,0,.75),
+      0 0 0 3px #30343a, 0 0 0 calc(var(--pbw)*.0065) #aeb6bd, 0 0 0 calc(var(--pbw)*.0085) #4a5056, 0 2.5vh 6vh rgba(0,0,0,.85);
+  }
+  :where(.pipboy > :not(.frame):not(.legend)) { display: block; }
+  .pb-bezel { position: absolute; z-index: 0; left: 9.6%; right: 9.6%; top: 3.6%; bottom: 14.2%; border-radius: 3.6% / 5.5%;
+    background: linear-gradient(160deg, #3b2c0a, #8a6a1e 30%, #43310c 60%, #6e5214);
+    box-shadow: inset 0 0 0 2px rgba(255,230,150,.35), inset 0 0 calc(var(--pbw)*.02) #000, 0 0 0 2px rgba(40,25,0,.8), 0 .4vh 1vh rgba(255,235,160,.25); }
+  .pipboy .frame { position: absolute; z-index: 1; left: 11%; right: 11%; top: 5.6%; bottom: 16.2%; width: auto; height: auto;
+    border-radius: 3% / 4.6%; box-shadow: 0 0 0 2px #000, inset 0 0 calc(var(--pbw)*.03) #000; }
+  .pipboy .frame::after { content: ""; position: absolute; inset: 0; z-index: 9; pointer-events: none; border-radius: inherit;
+    background: radial-gradient(ellipse at 50% 50%, transparent 58%, rgba(0,0,0,.45) 100%), linear-gradient(158deg, rgba(255,255,255,.075) 0, transparent 32%);
+    box-shadow: inset 0 0 calc(var(--pbw)*.025) rgba(0,0,0,.95); }
+  .pb-gauge { position: absolute; z-index: 2; left: 2.4%; top: 7%; width: calc(var(--pbw)*.064); height: calc(var(--pbw)*.064); border-radius: 50%;
+    background: linear-gradient(145deg, #e9edf0, #7e868d 55%, #c9d0d5); box-shadow: 0 0 0 .3vh #3a3f44, inset 0 0 .6vh rgba(0,0,0,.6), 0 .5vh 1vh rgba(0,0,0,.5); padding: calc(var(--pbw)*.0058); }
+  .pb-gauge-face { position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+    background: conic-gradient(from -70deg at 50% 78%, #d8d2b6 0 70deg, #e0c04a 70deg 100deg, #c0392b 100deg 140deg, #d8d2b6 140deg); box-shadow: inset 0 0 1.2vh rgba(0,0,0,.65); }
+  .pb-gauge-face b { position: absolute; left: 12%; bottom: 22%; font: 700 calc(var(--pbw)*.0085)/1 var(--font-ui); color: #2a2418; }
+  .pb-needle { position: absolute; left: 50%; bottom: 22%; width: 2px; height: 46%; background: #b3261a; transform-origin: 50% 100%;
+    transform: rotate(calc(-62deg + var(--rad, 0) * 124deg)); transition: transform .5s; box-shadow: 0 0 2px rgba(0,0,0,.5); }
+  .pb-engrave { position: absolute; z-index: 2; font: 700 calc(var(--pbw)*.0125)/1 var(--font-ui); letter-spacing: .22em; color: rgba(90,62,8,.85); text-shadow: 0 1px 0 rgba(255,238,170,.55), 0 -1px 0 rgba(40,25,0,.4); }
+  .pb-engrave-l { left: 2.6%; top: 22%; }
+  .pb-engrave-b { left: 3.4%; bottom: 5.6%; font-size: calc(var(--pbw)*.016); }
+  .pb-vents { position: absolute; z-index: 2; border-radius: .6vh; background: repeating-linear-gradient(180deg, #4c3a0c 0 .35vh, #c9a23d .35vh .75vh, #f1d77c .75vh 1vh, #9a7620 1vh 1.5vh); box-shadow: inset 0 0 .8vh rgba(0,0,0,.65), 0 0 0 1px rgba(40,25,0,.6); }
+  .pb-vents-l { left: 2.4%; top: 27%; width: 6.4%; height: 24%; }
+  .pb-vents-r { right: 2.4%; top: 12%; width: 6.4%; height: 46%; }
+  .pb-knob { position: absolute; z-index: 2; left: 2.7%; bottom: 17%; width: calc(var(--pbw)*.058); height: calc(var(--pbw)*.058); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff0b0, #c9a23d 40%, #6a4d0e 100%); box-shadow: 0 0 0 .35vh #4a3a10, 0 .8vh 1.4vh rgba(0,0,0,.6), inset 0 0 .8vh rgba(0,0,0,.4); }
+  .pb-knob i { position: absolute; left: 50%; top: 8%; width: 4%; height: 38%; background: #3a2a05; transform: translateX(-50%) rotate(-28deg); transform-origin: 50% 100%; border-radius: 2px; }
+  .pb-studs { position: absolute; z-index: 2; bottom: 3.2%; height: 3.4%; width: 22%; background: radial-gradient(circle, #fff4bd 0 18%, #5b4410 22% 52%, transparent 56%) 0 0 / 3.6% 100% repeat-x; }
+  .pb-studs-l { left: 12%; } .pb-studs-r { right: 12%; }
+  .pb-plate { display: flex; position: absolute; z-index: 3; left: 50%; bottom: 2.1%; transform: translateX(-50%); gap: calc(var(--pbw)*.012); padding: .5% 2.2% .6%; align-items: flex-end;
+    border-radius: 1.2vh; background: linear-gradient(180deg, #cfd5da, #8b939a 55%, #aab1b7); box-shadow: 0 0 0 .3vh #3a3f44, inset 0 0 .7vh rgba(0,0,0,.5), 0 .6vh 1vh rgba(0,0,0,.55); }
+  .pb-btn { appearance: none; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .3vh; padding: 0 calc(var(--pbw)*.008); font: 700 calc(var(--pbw)*.0092)/1 var(--font-ui); letter-spacing: .12em; color: #2b2f33; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+  .pb-btn i { display: block; width: calc(var(--pbw)*.036); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #a2512a, #4a1608 60%, #240a03); box-shadow: 0 0 0 .35vh #2c3136, inset 0 0 .6vh rgba(0,0,0,.7); transition: box-shadow .15s, background .15s; }
+  .pb-btn:hover i { background: radial-gradient(circle at 35% 30%, #c9643a, #6a2410 60%, #2e0e05); }
+  .pb-btn.on i { background: radial-gradient(circle at 40% 35%, #ffd2a0, #ff4a18 45%, #a31d06 100%); box-shadow: 0 0 0 .35vh #2c3136, 0 0 1.8vh .5vh rgba(255,80,30,.85), inset 0 0 .5vh rgba(255,230,200,.6); }
+  .pb-btn:focus-visible { outline: 2px solid #ffd68a; outline-offset: 2px; border-radius: 6px; }
+  .legend { margin-top: .6vh; }
+}
